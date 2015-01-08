@@ -41,9 +41,9 @@ make install DESTDIR=$BASE
 ########### #################################################################
 
 mkdir -p $SRC/openssl && cd $SRC/openssl
-$WGET http://www.openssl.org/source/openssl-1.0.1g.tar.gz
-tar zxvf openssl-1.0.1g.tar.gz
-cd openssl-1.0.1g
+$WGET http://www.openssl.org/source/openssl-1.0.1k.tar.gz
+tar zxvf openssl-1.0.1k.tar.gz
+cd openssl-1.0.1k
 
 cat << "EOF" > openssl.patch
 --- Configure_orig      2013-11-19 11:32:38.755265691 -0700
@@ -90,9 +90,9 @@ make install DESTDIR=$BASE
 ########### #################################################################
 
 mkdir $SRC/unbound && cd $SRC/unbound
-$WGET http://unbound.net/downloads/unbound-1.4.22.tar.gz
-tar zxvf unbound-1.4.22.tar.gz
-cd unbound-1.4.22
+$WGET https://unbound.net/downloads/unbound-1.5.1.tar.gz
+tar zxvf unbound-1.5.1.tar.gz
+cd unbound-1.5.1
 
 LDFLAGS=$LDFLAGS \
 CPPFLAGS=$CPPFLAGS \
