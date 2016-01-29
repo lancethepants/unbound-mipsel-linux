@@ -1,17 +1,21 @@
 #!/bin/bash
 
+set -e
+set -x
+
 mkdir ~/unbound && cd ~/unbound
+
+PREFIX=/jffs
 
 BASE=`pwd`
 SRC=$BASE/src
 WGET="wget --prefer-family=IPv4"
-RPATH=/jffs/lib
-DEST=$BASE/jffs
+DEST=$BASE$PREFIX
 LDFLAGS="-L$DEST/lib -Wl,--gc-sections"
 CPPFLAGS="-I$DEST/include"
 CFLAGS="-O3 -mtune=mips32 -mips32 -ffunction-sections -fdata-sections"
 CXXFLAGS=$CFLAGS
-CONFIGURE="./configure --prefix=/jffs --host=mipsel-linux"
+CONFIGURE="./configure --prefix=$PREFIX --host=mipsel-linux"
 MAKE="make -j`nproc`"
 mkdir -p $SRC
 
@@ -31,7 +35,7 @@ CXXFLAGS=$CXXFLAGS \
 CROSS_PREFIX=mipsel-linux- \
 ./configure \
 --static \
---prefix=/jffs
+--prefix=$PREFIX
 
 $MAKE
 make install DESTDIR=$BASE
@@ -41,30 +45,18 @@ make install DESTDIR=$BASE
 ########### #################################################################
 
 mkdir -p $SRC/openssl && cd $SRC/openssl
-$WGET http://www.openssl.org/source/openssl-1.0.1k.tar.gz
-tar zxvf openssl-1.0.1k.tar.gz
-cd openssl-1.0.1k
+$WGET https://www.openssl.org/source/openssl-1.0.2f.tar.gz
+tar zxvf openssl-1.0.2f.tar.gz
+cd openssl-1.0.2f
 
-cat << "EOF" > openssl.patch
---- Configure_orig      2013-11-19 11:32:38.755265691 -0700
-+++ Configure   2013-11-19 11:31:49.749650839 -0700
-@@ -402,6 +402,7 @@ my %table=(
- "linux-alpha+bwx-gcc","gcc:-O3 -DL_ENDIAN -DTERMIO::-D_REENTRANT::-ldl:SIXTY_FOUR_BIT_LONG RC4_CHAR RC4_CHUNK DES_RISC1 DES_UNROLL:${alpha_asm}:dlfcn:linux-shared:-fPIC::.so.\$(SHLIB_MAJOR).\$(SHLIB_MINOR)",
- "linux-alpha-ccc","ccc:-fast -readonly_strings -DL_ENDIAN -DTERMIO::-D_REENTRANT:::SIXTY_FOUR_BIT_LONG RC4_CHUNK DES_INT DES_PTR DES_RISC1 DES_UNROLL:${alpha_asm}",
- "linux-alpha+bwx-ccc","ccc:-fast -readonly_strings -DL_ENDIAN -DTERMIO::-D_REENTRANT:::SIXTY_FOUR_BIT_LONG RC4_CHAR RC4_CHUNK DES_INT DES_PTR DES_RISC1 DES_UNROLL:${alpha_asm}",
-+"linux-mipsel", "gcc:-DL_ENDIAN -DTERMIO -O3 -mtune=mips32 -mips32 -fomit-frame-pointer -Wall::-D_REENTRANT::-ldl:BN_LLONG RC4_CHAR RC4_CHUNK DES_INT DES_UNROLL BF_PTR:${mips32_asm}:o32:dlfcn:linux-shared:-fPIC::.so.\$(SHLIB_MAJOR).\$(SHLIB_MINOR)",
+./Configure linux-mips32 \
+-mtune=mips32 -mips32 -ffunction-sections -fdata-sections -Wl,--gc-sections \
+--prefix=$PREFIX zlib \
+--with-zlib-lib=$DEST/lib \
+--with-zlib-include=$DEST/include
 
- # Android: linux-* but without -DTERMIO and pointers to headers and libs.
- "android","gcc:-mandroid -I\$(ANDROID_DEV)/include -B\$(ANDROID_DEV)/lib -O3 -fomit-frame-pointer -Wall::-D_REENTRANT::-ldl:BN_LLONG RC4_CHAR RC4_CHUNK DES_INT DES_UNROLL BF_PTR:${no_asm}:dlfcn:linux-shared:-fPIC::.so.\$(SHLIB_MAJOR).\$(SHLIB_MINOR)",
-EOF
-
-patch < openssl.patch
-
-./Configure linux-mipsel \
---prefix=/opt shared
-
-make CC=mipsel-linux-gcc AR="mipsel-linux-ar r" RANLIB=mipsel-linux-ranlib
-make install CC=mipsel-linux-gcc AR="mipsel-linux-ar r" RANLIB=mipsel-linux-ranlib INSTALLTOP=$DEST OPENSSLDIR=$DEST/ssl
+make CC=mipsel-linux-gcc
+make CC=mipsel-linux-gcc install INSTALLTOP=$DEST OPENSSLDIR=$DEST/ssl
 
 ######### ###################################################################
 # EXPAT # ###################################################################
@@ -80,7 +72,8 @@ CPPFLAGS=$CPPFLAGS \
 CFLAGS=$CFLAGS \
 CXXFLAGS=$CXXFLAGS \
 $CONFIGURE \
---enable-static
+--enable-static \
+--disable-shared
 
 $MAKE
 make install DESTDIR=$BASE
@@ -90,9 +83,9 @@ make install DESTDIR=$BASE
 ########### #################################################################
 
 mkdir $SRC/unbound && cd $SRC/unbound
-$WGET https://unbound.net/downloads/unbound-1.5.1.tar.gz
-tar zxvf unbound-1.5.1.tar.gz
-cd unbound-1.5.1
+$WGET https://www.unbound.net/downloads/unbound-1.5.7.tar.gz
+tar zxvf unbound-1.5.7.tar.gz
+cd unbound-1.5.7
 
 LDFLAGS=$LDFLAGS \
 CPPFLAGS=$CPPFLAGS \
@@ -100,7 +93,11 @@ CFLAGS=$CFLAGS \
 CXXFLAGS=$CXXFLAGS \
 $CONFIGURE \
 --with-ssl=$DEST \
---with-libexpat=$DEST
+--with-libexpat=$DEST \
+--enable-static-exe \
+--enable-static \
+--disable-shared \
+--disable-flto
 
-$MAKE LIBS="-all-static -lcrypto -ldl"
+$MAKE LIBS="-all-static -lcrypto -lz -ldl"
 make install DESTDIR=$BASE/unbound
